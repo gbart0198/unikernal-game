@@ -25,6 +25,8 @@ static _START_MARKER: RequestsStartMarker = RequestsStartMarker::new();
 #[unsafe(link_section = ".requests_end_marker")]
 static _END_MARKER: RequestsEndMarker = RequestsEndMarker::new();
 
+static mut BUF: [u32; 8192] = [0; 8192];
+
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     assert!(BASE_REVISION.is_supported());
@@ -41,6 +43,21 @@ pub extern "C" fn _start() -> ! {
                         .add(pixel_offset as usize)
                         .cast::<u32>()
                         .write(0xFFFFFFFF);
+                }
+            }
+
+            unsafe {
+                BUF[0] = 0x00FFFFFF;
+            }
+            for i in 0..300_u64 {
+                let pixel_offset = 900 + i * 4;
+                unsafe {
+                    framebuffer
+                        .address()
+                        .cast::<u8>()
+                        .add(pixel_offset as usize)
+                        .cast::<u32>()
+                        .write(BUF[0]);
                 }
             }
         }
