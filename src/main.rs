@@ -4,7 +4,9 @@
 
 use core::arch::asm;
 
+use core::fmt::{Error, Write};
 use core::panic::PanicInfo;
+use core::str::Bytes;
 
 use limine::request::FramebufferRequest;
 use limine::{BaseRevision, RequestsEndMarker, RequestsStartMarker};
@@ -14,10 +16,6 @@ use limine::{BaseRevision, RequestsEndMarker, RequestsStartMarker};
 static BASE_REVISION: BaseRevision = BaseRevision::new();
 
 #[used]
-#[unsafe(link_section = ".requests")]
-static FRAMEBUFFER_REQUEST: FramebufferRequest = FramebufferRequest::new();
-
-#[used]
 #[unsafe(link_section = ".requests_start_marker")]
 static _START_MARKER: RequestsStartMarker = RequestsStartMarker::new();
 
@@ -25,7 +23,16 @@ static _START_MARKER: RequestsStartMarker = RequestsStartMarker::new();
 #[unsafe(link_section = ".requests_end_marker")]
 static _END_MARKER: RequestsEndMarker = RequestsEndMarker::new();
 
-static mut BUF: [u32; 8192] = [0; 8192];
+pub struct SerialWriter {}
+
+impl Write for SerialWriter {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        for c in s.bytes() {
+            unsafe { asm!("out dx, al", in("dx") 0x3F8, in("al") c ) }
+        }
+        Ok(())
+    }
+}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
@@ -33,9 +40,7 @@ pub extern "C" fn _start() -> ! {
 
     let test = "\r\n\r\nHello, Gart";
 
-    for c in test.bytes() {
-        unsafe { asm!("out dx, al", in("dx") 0x3F8, in("al") c ) }
-    }
+    write!(SerialWriter {}, "hello, {}", 42);
 
     main();
 }
