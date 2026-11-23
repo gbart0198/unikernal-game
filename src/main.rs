@@ -31,36 +31,10 @@ static mut BUF: [u32; 8192] = [0; 8192];
 pub extern "C" fn _start() -> ! {
     assert!(BASE_REVISION.is_supported());
 
-    if let Some(framebuffer_response) = FRAMEBUFFER_REQUEST.response() {
-        if let Some(framebuffer) = framebuffer_response.framebuffers().iter().next() {
-            for i in 0..100_u64 {
-                let pixel_offset = i * framebuffer.pitch + i * 4;
+    let test = "\r\n\r\nHello, Gart";
 
-                unsafe {
-                    framebuffer
-                        .address()
-                        .cast::<u8>()
-                        .add(pixel_offset as usize)
-                        .cast::<u32>()
-                        .write(0xFFFFFFFF);
-                }
-            }
-
-            unsafe {
-                BUF[0] = 0x00FFFFFF;
-            }
-            for i in 0..300_u64 {
-                let pixel_offset = 900 + i * 4;
-                unsafe {
-                    framebuffer
-                        .address()
-                        .cast::<u8>()
-                        .add(pixel_offset as usize)
-                        .cast::<u32>()
-                        .write(BUF[0]);
-                }
-            }
-        }
+    for c in test.bytes() {
+        unsafe { asm!("out dx, al", in("dx") 0x3F8, in("al") c ) }
     }
 
     main();
